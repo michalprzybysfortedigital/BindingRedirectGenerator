@@ -125,14 +125,20 @@ namespace BindingRedirectGenerator
                     .Descendants(XName.Get("assemblyIdentity", ns))?
                     .FirstOrDefault(i => i.Attribute("name")?.Value == asm.Name.Name && i.Attribute("publicKeyToken")?.Value == pkt && cultureFunc(i))?
                     .Parent;
-                if (dependentAssembly != null)
-                    continue;
+                if (dependentAssembly == null)
+                {
+                    dependentAssembly = new XElement(XName.Get("dependentAssembly", ns));
+                    assemblyBinding.Add(dependentAssembly);
+                }
 
-                dependentAssembly = new XElement(XName.Get("dependentAssembly", ns));
-                assemblyBinding.Add(dependentAssembly);
+                var assemblyIdentity =
+                    dependentAssembly.Descendants(XName.Get("assemblyIdentity", ns)).FirstOrDefault();
+                if (assemblyIdentity == null)
+                {
+                    assemblyIdentity = new XElement(XName.Get("assemblyIdentity", ns));
+                    dependentAssembly.Add(assemblyIdentity);
+                }
 
-                var assemblyIdentity = new XElement(XName.Get("assemblyIdentity", ns));
-                dependentAssembly.Add(assemblyIdentity);
                 assemblyIdentity.SetAttributeValue("name", asm.Name.Name);
                 assemblyIdentity.SetAttributeValue("publicKeyToken", pkt);
                 if (!string.IsNullOrEmpty(asm.Name.Culture))
@@ -140,9 +146,14 @@ namespace BindingRedirectGenerator
                     assemblyIdentity.SetAttributeValue("culture", asm.Name.Culture);
                 }
 
-                var bindingRedirect = new XElement(XName.Get("bindingRedirect", ns));
-                dependentAssembly.Add(bindingRedirect);
-                bindingRedirect.SetAttributeValue("oldVersion", "0.0.0.0-65535.65535.65535.65535");
+                var bindingRedirect =
+                    dependentAssembly.Descendants(XName.Get("bindingRedirect", ns)).FirstOrDefault();
+                if (bindingRedirect == null)
+                {
+                    bindingRedirect = new XElement(XName.Get("bindingRedirect", ns));
+                    dependentAssembly.Add(bindingRedirect);
+                }
+                bindingRedirect.SetAttributeValue("oldVersion", $"0.0.0.0-{asm.Name.Version.ToString()}");
                 bindingRedirect.SetAttributeValue("newVersion", asm.Name.Version.ToString());
             }
 
